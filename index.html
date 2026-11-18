@@ -40,6 +40,10 @@
   .counting b { color: var(--fg); font-weight: 600; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 12px; margin: 0 0 20px; }
   .caption { color: var(--muted); font-size: 13px; margin: 0 0 10px; max-width: 85ch; }
+  .chart-what { font-size: 14px; margin: -4px 0 6px; max-width: 85ch; }
+  .chart-what b { font-weight: 600; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; margin: 0 0 6px; }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
   .chart { position: relative; width: 100%; min-height: 360px; }
   svg text { fill: var(--muted); font-size: 12px; }
   .grid line { stroke: var(--line); }
@@ -142,7 +146,9 @@
 
   <div class="card">
     <h2 id="chart-title"></h2>
+    <p class="chart-what" id="chart-what"></p>
     <p class="caption" id="chart-caption"></p>
+    <div class="legend" id="chart-legend"></div>
     <div class="chart" id="chart"></div>
   </div>
 
@@ -333,6 +339,8 @@ function nice(v) {
 function draw() {
   const M = MEASURES[state.measure], f = curFilter(), change = state.view === "change";
   document.getElementById("counting").innerHTML = `Counting posts <b>${describe(f)}</b>.`;
+  const whoNote = state.who === "technical" ? " Technical roles only." : state.who === "regular" ? " Regular posters only." : "";
+  document.getElementById("chart-what").innerHTML = `Counting posts <b>${describe(f)}</b>.${whoNote}`;
   document.getElementById("bands-wrap").style.display = !change && (state.measure === "share" || state.measure === "days") ? "" : "none";
   document.getElementById("chart-title").textContent = (change ? "Change from period average: " : "") + M.title.toLowerCase().replace(/^./, c => c.toUpperCase());
   document.getElementById("chart-caption").textContent = M.caption(state.window) +
@@ -341,6 +349,9 @@ function draw() {
   const box = document.getElementById("chart");
   box.replaceChildren();
   const shown = LAB_UI.filter(l => state.on[l.key]).map(l => ({...l, ...series(l.key, f, state.measure, state.view)})).filter(s => s.pts.length);
+  const legend = document.getElementById("chart-legend");
+  legend.replaceChildren(...shown.map(s => { const d = document.createElement("span"), sw = document.createElement("span");
+    sw.className = "sw"; sw.style.background = s.color; d.append(sw, s.label); return d; }));
   if (!shown.length || !state.cats.size) { box.textContent = "Pick at least one lab and one topic."; drawTable(); drawLede(); return; }
   const W = Math.max(320, box.clientWidth), H = 360, m = {t: 14, r: 16, b: 30, l: 56};
   const iw = W - m.l - m.r, ih = H - m.t - m.b;

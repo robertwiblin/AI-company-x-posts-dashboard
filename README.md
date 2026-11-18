@@ -8,11 +8,11 @@ When `../ai_staff_tweets.csv`, `../accounts.csv` or `../employment_history.csv` 
 
     python3 build_dashboard.py
 
-`template.html` holds the page's design and code; the build script fills in the data and writes `index.html`. Every combination of topic, stance, off-message score, lab, measure and window is calculated in the browser from that data, so adding filters costs nothing extra to build.
+`template.html` holds the page's design and code; the build script fills in the data and writes `index.html`. Every combination of topic, stance, lab, measure and window is calculated in the browser from that data, so adding filters costs nothing extra to build.
 
 ## What it shows
 
-Posts tagged as about AI (`ai_topic` "AI" or "AI (keyword match)") from accounts whose `include` is "Yes" or "Maybe: light poster", filtered by the labels in `../categorisation/`: topic, stance on AI risk (risk and policy posts only) and off-message score (provisional).
+Posts tagged as about AI (`ai_topic` "AI" or "AI (keyword match)") from accounts whose `include` is "Yes" or "Maybe: light poster", filtered by the labels in `../categorisation/`: topic and stance on AI risk (risk and policy posts only). Off-message scores are left out of the page until they have been checked by hand; they stay in `ai_staff_tweets.csv`.
 
 People who changed labs (`../employment_history.csv`) count for each lab only while they worked there, and in each moving window someone counts only if they worked at that lab for all of it. The last day shown is the day before the last day of data, because each pull stops at midday UTC.
 

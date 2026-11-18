@@ -3,7 +3,7 @@
 
 Run from anywhere:  python3 build_dashboard.py
 Only standard-library Python is needed. The page it writes works offline and contains no handles or post text:
-just anonymous job stints and, for each AI post, the day and its labels.
+just anonymous job stints and, for each AI post, the day, topic and stance (off-message scores are left out).
 """
 import csv, json, os, datetime as dt, collections
 
@@ -54,7 +54,7 @@ for t in tweets:
             cat = t.get("category") or ""
             if cat not in CATS: missing += 1; cat = "OTHER"
             st = t.get("risk_stance") or "-"
-            off = int(t["off_message"]) if t.get("off_message", "") in ("0", "1", "2", "3") else 0
+            off = 0  # off-message scores are left out of the page until they are validated
             posts += [i, d, CATS.index(cat) * 16 + STANCES.index(st if st in STANCES else "-") * 4 + off]
             n_ai += 1
 data = {

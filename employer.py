@@ -14,8 +14,3 @@ def load(acc_path, hist_path):
             if (not s["from"] or day >= s["from"]) and (not s["to"] or day <= s["to"]): return s["company"]
         return None
     return employer
-if __name__ == "__main__":
-    e = load("audit/accounts.csv", "audit/employment_history.csv")
-    for h, d in [("@_catwu", "2026-10-01"), ("@_catwu", "2026-11-02"), ("@_catwu", "2026-11-10"), ("@ahall_research", "2026-08-17"),
-                 ("@ahall_research", "2026-08-18"), ("@stellakaval", "2026-09-27"), ("@karpathy", "2026-09-01")]:
-        print(h, d, "->", e(h, d))

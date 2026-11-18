@@ -71,10 +71,13 @@
   .seg button + button { border-left: 1px solid var(--line); }
   .seg button.on { background: var(--fg); color: var(--bg); }
   label.check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--fg); }
+  .notice { background: #fff4ce; color: #5c4400; border: 1px solid #e8cf7a; border-radius: 8px; padding: 10px 14px; margin: 0 0 18px; font-size: 14px; font-weight: 600; }
+  @media (prefers-color-scheme: dark) { .notice { background: #3a3215; color: #f3dc8c; border-color: #6b5a1f; } }
 </style>
 </head>
 <body>
 <div class="page">
+  <p class="notice" role="note">Not validated: please don't share more widely yet.</p>
   <h1>What AI company staff post about on X</h1>
   <p class="lede" id="lede"></p>
   <p class="meta" id="meta"></p>
@@ -95,13 +98,6 @@
           <option value="1">Concerned</option>
           <option value="2">Reassuring</option>
           <option value="3">Neutral</option>
-        </select>
-      </label>
-      <label class="control">Off-message (provisional)
-        <select id="off">
-          <option value="-1">Any</option>
-          <option value="1">Scored 1 or more</option>
-          <option value="2">Scored 2 or 3</option>
         </select>
       </label>
     </div>
@@ -160,7 +156,7 @@
     <summary>How this works, and what to be careful about</summary>
     <ul>
       <li><b>Who is tracked.</b> Staff at OpenAI, Anthropic, Google DeepMind, Meta and xAI whose X bio names that lab as their employer, or who are confirmed by another reliable source, and who posted at least once in the six months before collection. Company accounts, bots, developer-relations, marketing and executive accounts, and six very high-volume posters are excluded. People who changed labs count for each lab only while they worked there, and someone counts in a window only if they worked at that lab for all of it. xAI has few accounts, so its figures are rough.</li>
-      <li><b>What counts.</b> Standalone posts and quote tweets about AI, broadly understood. Replies, retweets and thread continuations are left out. Claude Sonnet read every AI post (with the post it quotes) and gave it one topic, a stance on AI risk for risk and policy posts, and an off-message score. Topics: <i>own lab</i> (launches, research, promotion), <i>products and AI use</i>, <i>research and technical</i>, <i>industry and business</i>, <i>risks, safety and downsides</i>, <i>policy and governance</i>, <i>future and big picture</i>, <i>other</i>. Off-message means the author's employer would probably rather it hadn't been posted; those scores are provisional until checked against human labels.</li>
+      <li><b>What counts.</b> Standalone posts and quote tweets about AI, broadly understood. Replies, retweets and thread continuations are left out. Claude Sonnet read every AI post (with the post it quotes) and gave it one topic and, for risk and policy posts, a stance on AI risk. Topics: <i>own lab</i> (launches, research, promotion), <i>products and AI use</i>, <i>research and technical</i>, <i>industry and business</i>, <i>risks, safety and downsides</i>, <i>policy and governance</i>, <i>future and big picture</i>, <i>other</i>.</li>
       <li><b>Why these measures.</b> Posting is extremely concentrated: <span id="conc"></span> So the main measures count people, not posts. "Share of staff who posted" counts each person once however much they post. "Days with a post" counts each day once, so nobody can add more than seven a week. "Share of AI posts" and "Posts per day" count posts, so a few prolific people can move them.</li>
       <li><b>The two kinds of interval.</b> <i>Change from period average</i> compares each person with their own average over the whole period, then averages those differences across people. Because each person is compared with themselves, differences between people cancel out, so the interval is narrow and answers "has this group's behaviour shifted?". In the table, a change is shown in colour with an arrow only when its 95% interval excludes zero. <i>Intervals for comparing labs</i> (on the level view) treat each lab's tracked staff as a sample of its staff on X, so they are much wider: they answer "is this lab really different from that one?", where different people are being compared. Neither says anything about staff who aren't on X.</li>
       <li><b>Reading the lines.</b> Each point covers a whole window, and neighbouring points share most of their days, so the lines are smooth and successive points are not independent. A single point just outside its interval is weak evidence; a shift that lasts for several weeks is stronger. With many topics and labs, a few cells will show a "significant" change by chance alone.</li>
@@ -197,7 +193,6 @@ const PRESETS = [
   {label: "Risks and safety", cats: [4], stance: -1, off: -1},
   {label: "Policy", cats: [5], stance: -1, off: -1},
   {label: "Concerned about AI risk", cats: [4, 5], stance: 1, off: -1},
-  {label: "Off-message (provisional)", cats: ALLCATS, stance: -1, off: 2},
 ];
 const MEASURES = {
   share: {title: "Share of staff who posted", short: "share who posted",
@@ -410,7 +405,6 @@ const ROWS = [
   ...CATS.map((c, i) => ({label: c.chip, f: {cats: new Set([i]), stance: -1, off: -1}})),
   {label: "Concerned about AI risk", f: {cats: new Set([4, 5]), stance: 1, off: -1}},
   {label: "Reassuring about AI risk", f: {cats: new Set([4, 5]), stance: 2, off: -1}},
-  {label: "Off-message, 2 or 3 (provisional)", f: {cats: new Set(ALLCATS), stance: -1, off: 2}},
 ];
 const MIN_K = 15;
 function drawTable() {
@@ -469,7 +463,7 @@ function drawLede() {
 // ---- controls
 function applyFilter(f) {
   state.cats = new Set(f.cats); state.stance = f.stance; state.off = f.off;
-  document.getElementById("stance").value = String(f.stance); document.getElementById("off").value = String(f.off);
+  document.getElementById("stance").value = String(f.stance);
   syncChips(); draw();
 }
 function syncChips() {
@@ -500,7 +494,6 @@ function init() {
   const L = document.getElementById("labs");
   LAB_UI.forEach(l => { const c = chip(l.label, l.color, () => { state.on[l.key] = !state.on[l.key]; c.classList.toggle("off", !state.on[l.key]); draw(); }); if (!l.on) c.classList.add("off"); L.appendChild(c); });
   document.getElementById("stance").addEventListener("change", e => { state.stance = Number(e.target.value); syncChips(); draw(); });
-  document.getElementById("off").addEventListener("change", e => { state.off = Number(e.target.value); syncChips(); draw(); });
   document.getElementById("measure").addEventListener("change", e => { state.measure = e.target.value; draw(); });
   document.getElementById("window").addEventListener("change", e => { state.window = Number(e.target.value); draw(); });
   document.getElementById("who").addEventListener("change", e => { state.who = e.target.value; draw(); });

@@ -337,7 +337,7 @@ function draw() {
   document.getElementById("chart-title").textContent = (change ? "Change from period average: " : "") + M.title.toLowerCase().replace(/^./, c => c.toUpperCase());
   document.getElementById("chart-caption").textContent = M.caption(state.window) +
     (change ? (state.measure === "propn" ? " Shown as the difference from the period average." :
-      " Shown as the difference from the same people's own average over the whole period, with a 95% interval for that difference.") : "");
+      " Shown as the difference from the same people's own average over the whole period. Hover over the chart for the 95% interval.") : "");
   const box = document.getElementById("chart");
   box.replaceChildren();
   const shown = LAB_UI.filter(l => state.on[l.key]).map(l => ({...l, ...series(l.key, f, state.measure, state.view)})).filter(s => s.pts.length);
@@ -347,7 +347,7 @@ function draw() {
   const first = state.window - 1, lastI = N - 1;
   const x = i => m.l + (i - first) / (lastI - first) * iw;
   let ymin = 0, ymax = 0;
-  for (const s of shown) for (const p of s.pts) { ymax = Math.max(ymax, p.hi ?? p.v, p.v); ymin = Math.min(ymin, p.lo ?? p.v, p.v); }
+  for (const s of shown) for (const p of s.pts) { ymax = Math.max(ymax, change ? p.v : (p.hi ?? p.v), p.v); ymin = Math.min(ymin, change ? p.v : (p.lo ?? p.v), p.v); }
   if (change) { const a = nice(Math.max(Math.abs(ymin), Math.abs(ymax)) * 1.1); ymin = -a; ymax = a; }
   else { ymin = 0; ymax = (state.measure === "share" || state.measure === "propn") ? Math.min(1, nice(ymax * 1.08)) : nice(ymax * 1.08); }
   const y = v => m.t + ih - (v - ymin) / (ymax - ymin) * ih;
@@ -365,7 +365,7 @@ function draw() {
     const t = el("text", {x: x(i), y: H - 8, "text-anchor": "middle"}, svg); t.textContent = fmtDate(dateOf(i));
   }
   for (const s of shown) {
-    if (s.pts[0].lo != null) {
+    if (!change && s.pts[0].lo != null) {
       const up = s.pts.map(p => `${x(p.i)},${y(p.hi)}`), dn = s.pts.slice().reverse().map(p => `${x(p.i)},${y(p.lo)}`);
       el("polygon", {points: up.concat(dn).join(" "), style: `fill:${s.color};opacity:0.14`}, svg);
     }

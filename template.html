@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What AI company staff post about on X</title>
+<style>
+  :root {
+    --fg: #1d1d1b; --muted: #6b6a66; --line: #e4e2dc; --panel: #f7f6f2; --bg: #ffffff; --chip: #ffffff;
+    --oai: #1b7f6a; --ant: #c4602f; --gdm: #2f5fb3; --meta: #7a4bb0; --xai: #9a7b12; --all: #555555;
+    --up: #1f7a3d; --down: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg: #ecebe6; --muted: #a3a19a; --line: #3a3935; --panel: #232220; --bg: #1a1918; --chip: #2b2a27;
+            --oai: #4fc3a6; --ant: #e48a5c; --gdm: #6f98e6; --meta: #ad86de; --xai: #d9b84a; --all: #bbbbbb;
+            --up: #5cc47e; --down: #f07c72; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .page { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font: 400 30px/1.2 Georgia, "Times New Roman", serif; margin: 0 0 8px; }
+  h2 { font-size: 17px; font-weight: 600; margin: 0 0 4px; }
+  .lede { font-size: 17px; margin: 0 0 6px; max-width: 75ch; }
+  .meta { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin: 0 0 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: flex-end; }
+  .row + .row { margin-top: 12px; }
+  .control { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); }
+  select { font: inherit; color: var(--fg); background: var(--chip); border: 1px solid var(--line);
+           border-radius: 6px; padding: 5px 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line);
+          border-radius: 999px; cursor: pointer; user-select: none; font-size: 13px; color: var(--fg); background: var(--chip); }
+  .chip .swatch { width: 10px; height: 10px; border-radius: 50%; }
+  .chip.off { opacity: 0.42; }
+  .chip.preset { border-style: dashed; }
+  .chip.preset.active { border-style: solid; border-color: var(--fg); }
+  .counting { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .counting b { color: var(--fg); font-weight: 600; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 12px; margin: 0 0 20px; }
+  .caption { color: var(--muted); font-size: 13px; margin: 0 0 10px; max-width: 85ch; }
+  .chart { position: relative; width: 100%; min-height: 360px; }
+  svg text { fill: var(--muted); font-size: 12px; }
+  .grid line { stroke: var(--line); }
+  .zero { stroke: var(--muted); opacity: .6; }
+  .tip { position: absolute; pointer-events: none; background: var(--bg); border: 1px solid var(--line);
+         border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12);
+         white-space: nowrap; z-index: 2; }
+  .tip .d { color: var(--muted); margin-bottom: 4px; }
+  .tip .r { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+  .tip .s { width: 8px; height: 8px; border-radius: 50%; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; vertical-align: bottom; }
+  th:first-child, td:first-child { text-align: left; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover td { background: var(--chip); }
+  tr.sel td { background: var(--chip); }
+  tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--fg); font-weight: 600; }
+  td .ch { display: block; font-size: 12px; color: var(--muted); }
+  td .ch.up { color: var(--up); font-weight: 600; }
+  td .ch.down { color: var(--down); font-weight: 600; }
+  td.thin { color: var(--muted); font-style: italic; }
+  .wrap { overflow-x: auto; }
+  details { color: var(--muted); font-size: 14px; }
+  details summary { cursor: pointer; color: var(--fg); font-weight: 600; margin-bottom: 6px; }
+  details li { margin-bottom: 7px; max-width: 88ch; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 13px; border: 0; padding: 5px 11px; background: var(--chip); color: var(--fg); cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on { background: var(--fg); color: var(--bg); }
+  label.check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--fg); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>What AI company staff post about on X</h1>
+  <p class="lede" id="lede"></p>
+  <p class="meta" id="meta"></p>
+
+  <div class="panel">
+    <div class="row">
+      <div class="control">Which posts count
+        <div class="chips" id="presets"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="control">Topics
+        <div class="chips" id="cats"></div>
+      </div>
+      <label class="control">Stance on AI risk
+        <select id="stance">
+          <option value="-1">Any</option>
+          <option value="1">Concerned</option>
+          <option value="2">Reassuring</option>
+          <option value="3">Neutral</option>
+        </select>
+      </label>
+      <label class="control">Off-message (provisional)
+        <select id="off">
+          <option value="-1">Any</option>
+          <option value="1">Scored 1 or more</option>
+          <option value="2">Scored 2 or 3</option>
+        </select>
+      </label>
+    </div>
+    <div class="counting" id="counting"></div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <div class="control">Labs
+        <div class="chips" id="labs"></div>
+      </div>
+    </div>
+    <div class="row">
+      <label class="control">Measure
+        <select id="measure">
+          <option value="share">Share of staff who posted</option>
+          <option value="days">Days with a post, per person per week</option>
+          <option value="propn">Share of AI posts</option>
+          <option value="total">Posts per day</option>
+        </select>
+      </label>
+      <div class="control">Show
+        <div class="seg" id="view"><button data-v="level" class="on">Level</button><button data-v="change">Change from period average</button></div>
+      </div>
+      <label class="control">Moving window
+        <select id="window">
+          <option value="7">7 days</option>
+          <option value="14" selected>14 days</option>
+          <option value="28">28 days</option>
+        </select>
+      </label>
+      <label class="control">Who
+        <select id="who">
+          <option value="all">All tracked staff</option>
+          <option value="technical">Technical roles only</option>
+          <option value="regular">Regular posters only</option>
+        </select>
+      </label>
+      <label class="check" id="bands-wrap"><input type="checkbox" id="bands"> 95% intervals for comparing labs</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="chart-title"></h2>
+    <p class="caption" id="chart-caption"></p>
+    <div class="chart" id="chart"></div>
+  </div>
+
+  <div class="card">
+    <h2>Every topic and lab: latest window compared with each group's own average</h2>
+    <p class="caption" id="table-caption"></p>
+    <div class="wrap"><table id="table"></table></div>
+  </div>
+
+  <details>
+    <summary>How this works, and what to be careful about</summary>
+    <ul>
+      <li><b>Who is tracked.</b> Staff at OpenAI, Anthropic, Google DeepMind, Meta and xAI whose X bio names that lab as their employer, or who are confirmed by another reliable source, and who posted at least once in the six months before collection. Company accounts, bots, developer-relations, marketing and executive accounts, and six very high-volume posters are excluded. People who changed labs count for each lab only while they worked there, and someone counts in a window only if they worked at that lab for all of it. xAI has few accounts, so its figures are rough.</li>
+      <li><b>What counts.</b> Standalone posts and quote tweets about AI, broadly understood. Replies, retweets and thread continuations are left out. Claude Sonnet read every AI post (with the post it quotes) and gave it one topic, a stance on AI risk for risk and policy posts, and an off-message score. Topics: <i>own lab</i> (launches, research, promotion), <i>products and AI use</i>, <i>research and technical</i>, <i>industry and business</i>, <i>risks, safety and downsides</i>, <i>policy and governance</i>, <i>future and big picture</i>, <i>other</i>. Off-message means the author's employer would probably rather it hadn't been posted; those scores are provisional until checked against human labels.</li>
+      <li><b>Why these measures.</b> Posting is extremely concentrated: <span id="conc"></span> So the main measures count people, not posts. "Share of staff who posted" counts each person once however much they post. "Days with a post" counts each day once, so nobody can add more than seven a week. "Share of AI posts" and "Posts per day" count posts, so a few prolific people can move them.</li>
+      <li><b>The two kinds of interval.</b> <i>Change from period average</i> compares each person with their own average over the whole period, then averages those differences across people. Because each person is compared with themselves, differences between people cancel out, so the interval is narrow and answers "has this group's behaviour shifted?". In the table, a change is shown in colour with an arrow only when its 95% interval excludes zero. <i>Intervals for comparing labs</i> (on the level view) treat each lab's tracked staff as a sample of its staff on X, so they are much wider: they answer "is this lab really different from that one?", where different people are being compared. Neither says anything about staff who aren't on X.</li>
+      <li><b>Reading the lines.</b> Each point covers a whole window, and neighbouring points share most of their days, so the lines are smooth and successive points are not independent. A single point just outside its interval is weak evidence; a shift that lasts for several weeks is stronger. With many topics and labs, a few cells will show a "significant" change by chance alone.</li>
+      <li><b>Short history.</b> The data starts on <span id="start"></span>, and late August includes summer holidays, so the period average is pulled down a little by a quiet start. Treat this as a first look until more months are added.</li>
+      <li><b>Privacy.</b> This page contains no names, handles or post text, only anonymous job stints and the date and labels of each post.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+const D = /*__DATA__*/null;
+const LAB_UI = [
+  {key: 0, label: "OpenAI", color: "var(--oai)", on: true},
+  {key: 1, label: "Anthropic", color: "var(--ant)", on: true},
+  {key: 2, label: "Google DeepMind", color: "var(--gdm)", on: true},
+  {key: 3, label: "Meta", color: "var(--meta)", on: false},
+  {key: 4, label: "xAI", color: "var(--xai)", on: false},
+  {key: "all", label: "All labs", color: "var(--all)", on: false},
+];
+const CATS = [
+  {code: "OWN", chip: "Own lab", phrase: "promoting their own lab"},
+  {code: "PRODUCTS", chip: "Products and AI use", phrase: "about products and using AI"},
+  {code: "RESEARCH", chip: "Research and technical", phrase: "about research and technical topics"},
+  {code: "INDUSTRY", chip: "Industry and business", phrase: "about the industry and business"},
+  {code: "RISK", chip: "Risks, safety, downsides", phrase: "about AI risks, safety and downsides"},
+  {code: "POLICY", chip: "Policy and governance", phrase: "about AI policy and governance"},
+  {code: "FUTURE", chip: "Future and big picture", phrase: "about the future and big picture"},
+  {code: "OTHER", chip: "Other", phrase: "about other AI topics"},
+];
+const ALLCATS = CATS.map((_, i) => i);
+const PRESETS = [
+  {label: "All AI posts", cats: ALLCATS, stance: -1, off: -1},
+  {label: "Own-lab promotion", cats: [0], stance: -1, off: -1},
+  {label: "Risks and safety", cats: [4], stance: -1, off: -1},
+  {label: "Policy", cats: [5], stance: -1, off: -1},
+  {label: "Concerned about AI risk", cats: [4, 5], stance: 1, off: -1},
+  {label: "Off-message (provisional)", cats: ALLCATS, stance: -1, off: 2},
+];
+const MEASURES = {
+  share: {title: "Share of staff who posted", short: "share who posted",
+          caption: w => `Each point: the share of tracked staff with at least one matching post in the ${w} days to that date. Everyone counts once, whether they posted once or a hundred times.`,
+          fmt: v => Math.round(v * 100) + "%", dfmt: v => fmtSigned(v * 100, 0) + " pts", axis: v => Math.round(v * 100) + "%", daxis: v => fmtSigned(v * 100, 0) + " pts"},
+  days:  {title: "Days with a post, per person per week", short: "days a week",
+          caption: w => `Each point: over the ${w} days to that date, the number of days each person made at least one matching post, averaged across tracked staff and scaled to a week. A day counts once however many posts it held.`,
+          fmt: v => v.toFixed(2), dfmt: v => fmtSigned(v, 2), axis: v => v.toFixed(1), daxis: v => fmtSigned(v, 1)},
+  propn: {title: "Share of AI posts", short: "share of AI posts",
+          caption: w => `Each point: matching posts as a share of all AI posts by tracked staff in the ${w} days to that date. Counts posts, so prolific people weigh more. No intervals.`,
+          fmt: v => Math.round(v * 100) + "%", dfmt: v => fmtSigned(v * 100, 0) + " pts", axis: v => Math.round(v * 100) + "%", daxis: v => fmtSigned(v * 100, 0) + " pts"},
+  total: {title: "Posts per day", short: "posts a day",
+          caption: w => `Each point: matching posts by tracked staff in the ${w} days to that date, divided by ${w}. Counts posts, so a few prolific people drive it.`,
+          fmt: v => v.toFixed(1), dfmt: v => fmtSigned(v, 1), axis: v => v.toFixed(0), daxis: v => fmtSigned(v, 0)},
+};
+const fmtSigned = (v, dp) => { const a = Math.abs(v).toFixed(dp); return Number(a) === 0 ? (0).toFixed(dp) : (v > 0 ? "+" : "−") + a; };
+const DAY = 86400000, t0 = Date.parse(D.start + "T00:00:00Z");
+const dateOf = i => new Date(t0 + i * DAY);
+const fmtDate = (d, year) => d.toLocaleDateString("en-GB", {day: "numeric", month: "short", timeZone: "UTC", ...(year ? {year: "numeric"} : {})});
+const MEM = D.members.map(([p, lab, tech, reg, s, e]) => ({p, lab, tech: !!tech, reg: !!reg, s, e}));
+const POSTS = D.posts, N = D.days;
+
+const state = {cats: new Set(ALLCATS), stance: -1, off: -1, measure: "share", view: "level", window: 14, who: "all", bands: false,
+               on: Object.fromEntries(LAB_UI.map(l => [l.key, l.on]))};
+
+// ---- counting: prefix sums per member for a given post filter, cached
+const cache = new Map();
+function filterKey(f) { return [...f.cats].sort().join(",") + "|" + f.stance + "|" + f.off; }
+function prefixes(f) {
+  const key = filterKey(f);
+  if (cache.has(key)) return cache.get(key);
+  const cnt = MEM.map(() => new Int32Array(N));
+  for (let j = 0; j < POSTS.length; j += 3) {
+    const c = POSTS[j + 2], cat = c >> 4, st = (c >> 2) & 3, off = c & 3;
+    if (f.cats.has(cat) && (f.stance < 0 || st === f.stance) && (f.off < 0 || off >= f.off)) cnt[POSTS[j]][POSTS[j + 1]]++;
+  }
+  const out = cnt.map(c => {
+    const P = new Int32Array(N + 1), Q = new Int32Array(N + 1);
+    for (let d = 0; d < N; d++) { P[d + 1] = P[d] + c[d]; Q[d + 1] = Q[d] + (c[d] ? 1 : 0); }
+    return {P, Q};
+  });
+  cache.set(key, out);
+  return out;
+}
+const ALLF = {cats: new Set(ALLCATS), stance: -1, off: -1};
+
+function inGroup(m, lab) {
+  return (lab === "all" || m.lab === lab) &&
+    (state.who === "all" || (state.who === "technical" ? m.tech : m.reg));
+}
+
+// One series: values for each window end from W-1 to N-1.
+function series(lab, f, measure, view) {
+  const W = state.window, first = W - 1, T = N - first;
+  const pre = prefixes(f), all = measure === "propn" ? prefixes(ALLF) : null;
+  const idx = []; MEM.forEach((m, i) => { if (inGroup(m, lab)) idx.push(i); });
+  // x[member][t]: the member's value in window t (NaN if not at the lab for the whole window)
+  const X = idx.map(i => {
+    const m = MEM[i], x = new Float64Array(T).fill(NaN);
+    for (let t = 0; t < T; t++) {
+      const end = first + t, st = end - W + 1;
+      if (m.s > st || m.e < end) continue;
+      const c = pre[i].P[end + 1] - pre[i].P[st];
+      x[t] = measure === "share" ? (c > 0 ? 1 : 0) : measure === "days" ? (pre[i].Q[end + 1] - pre[i].Q[st]) * 7 / W : c;
+    }
+    return x;
+  });
+  const pts = [];
+  if (measure === "propn") {
+    for (let t = 0; t < T; t++) {
+      let num = 0, den = 0, k = 0;
+      idx.forEach((i, j) => { if (!isNaN(X[j][t])) { k++; num += X[j][t]; const end = first + t; den += all[i].P[end + 1] - all[i].P[end - W + 1]; } });
+      if (k) pts.push({i: first + t, v: den ? num / den : 0, k, lo: null, hi: null});
+    }
+    if (view === "change" && pts.length) { const avg = pts.reduce((a, p) => a + p.v, 0) / pts.length; pts.forEach(p => { p.v -= avg; }); }
+    return {pts, k: pts.length ? pts[pts.length - 1].k : 0};
+  }
+  const sum = measure === "total";  // posts per day is a total across people, not an average
+  const base = X.map(x => { let s = 0, n = 0; for (const v of x) if (!isNaN(v)) { s += v; n++; } return n ? s / n : NaN; });
+  for (let t = 0; t < T; t++) {
+    let k = 0, s = 0, s2 = 0, ds = 0, ds2 = 0;
+    for (let j = 0; j < X.length; j++) {
+      const v = X[j][t]; if (isNaN(v)) continue;
+      k++; s += v; s2 += v * v; const d = v - base[j]; ds += d; ds2 += d * d;
+    }
+    if (!k) continue;
+    const scale = sum ? 1 / W : 1;
+    let v, lo = null, hi = null;
+    if (view === "level") {
+      const mean = s / k;
+      v = sum ? s * scale : mean;
+      if (state.bands && measure === "share") {
+        const z = 1.96, den = 1 + z * z / k, c = mean + z * z / (2 * k), half = z * Math.sqrt(mean * (1 - mean) / k + z * z / (4 * k * k));
+        lo = (c - half) / den; hi = (c + half) / den;
+      } else if (state.bands && measure === "days" && k > 1) {
+        const sd = Math.sqrt(Math.max(0, (s2 - s * s / k) / (k - 1)));
+        lo = Math.max(0, mean - 1.96 * sd / Math.sqrt(k)); hi = mean + 1.96 * sd / Math.sqrt(k);
+      }
+    } else {
+      // paired: each person's value minus their own period average, averaged across people
+      const md = ds / k, sd = k > 1 ? Math.sqrt(Math.max(0, (ds2 - ds * ds / k) / (k - 1))) : 0;
+      const se = sd / Math.sqrt(k);
+      if (sum) { v = ds * scale; lo = v - 1.96 * se * k * scale; hi = v + 1.96 * se * k * scale; }
+      else { v = md; lo = md - 1.96 * se; hi = md + 1.96 * se; }
+    }
+    pts.push({i: first + t, v, lo, hi, k});
+  }
+  return {pts, k: pts.length ? pts[pts.length - 1].k : 0};
+}
+
+// ---- descriptions
+function describe(f) {
+  const cs = [...f.cats].sort((a, b) => a - b);
+  let s = cs.length === CATS.length ? "about AI" :
+    cs.length === 0 ? "(no topics picked)" : cs.map(c => CATS[c].phrase).join(" or ").replace(/ or about /g, " or ");
+  if (f.stance === 1) s += ", with a concerned stance on AI risk";
+  if (f.stance === 2) s += ", with a reassuring stance on AI risk";
+  if (f.stance === 3) s += ", with a neutral stance on AI risk";
+  if (f.off === 1) s += ", scored at least mildly off-message";
+  if (f.off === 2) s += ", scored clearly off-message";
+  return s;
+}
+const curFilter = () => ({cats: state.cats, stance: state.stance, off: state.off});
+
+// ---- chart
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function nice(v) {
+  if (v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+
+function draw() {
+  const M = MEASURES[state.measure], f = curFilter(), change = state.view === "change";
+  document.getElementById("counting").innerHTML = `Counting posts <b>${describe(f)}</b>.`;
+  document.getElementById("bands-wrap").style.display = !change && (state.measure === "share" || state.measure === "days") ? "" : "none";
+  document.getElementById("chart-title").textContent = (change ? "Change from period average: " : "") + M.title.toLowerCase().replace(/^./, c => c.toUpperCase());
+  document.getElementById("chart-caption").textContent = M.caption(state.window) +
+    (change ? (state.measure === "propn" ? " Shown as the difference from the period average." :
+      " Shown as the difference from the same people's own average over the whole period, with a 95% interval for that difference.") : "");
+  const box = document.getElementById("chart");
+  box.replaceChildren();
+  const shown = LAB_UI.filter(l => state.on[l.key]).map(l => ({...l, ...series(l.key, f, state.measure, state.view)})).filter(s => s.pts.length);
+  if (!shown.length || !state.cats.size) { box.textContent = "Pick at least one lab and one topic."; drawTable(); drawLede(); return; }
+  const W = Math.max(320, box.clientWidth), H = 360, m = {t: 14, r: 16, b: 30, l: 56};
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const first = state.window - 1, lastI = N - 1;
+  const x = i => m.l + (i - first) / (lastI - first) * iw;
+  let ymin = 0, ymax = 0;
+  for (const s of shown) for (const p of s.pts) { ymax = Math.max(ymax, p.hi ?? p.v, p.v); ymin = Math.min(ymin, p.lo ?? p.v, p.v); }
+  if (change) { const a = nice(Math.max(Math.abs(ymin), Math.abs(ymax)) * 1.1); ymin = -a; ymax = a; }
+  else { ymin = 0; ymax = (state.measure === "share" || state.measure === "propn") ? Math.min(1, nice(ymax * 1.08)) : nice(ymax * 1.08); }
+  const y = v => m.t + ih - (v - ymin) / (ymax - ymin) * ih;
+  const svg = el("svg", {width: "100%", height: H, viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": `${M.title} for posts ${describe(f)}, by lab, ${state.window}-day moving window`}, box);
+  const grid = el("g", {class: "grid"}, svg);
+  for (let k = 0; k <= (change ? 4 : 5); k++) {
+    const v = ymin + (ymax - ymin) * k / (change ? 4 : 5), yy = y(v);
+    el("line", {x1: m.l, x2: W - m.r, y1: yy, y2: yy}, grid);
+    const t = el("text", {x: m.l - 8, y: yy + 4, "text-anchor": "end"}, svg); t.textContent = change ? M.daxis(v) : M.axis(v);
+  }
+  if (change) el("line", {x1: m.l, x2: W - m.r, y1: y(0), y2: y(0), class: "zero"}, svg);
+  const step = iw < 500 ? 28 : 14;
+  for (let i = first; i <= lastI; i++) if ((i - first) % step === 0) {
+    const t = el("text", {x: x(i), y: H - 8, "text-anchor": "middle"}, svg); t.textContent = fmtDate(dateOf(i));
+  }
+  for (const s of shown) {
+    if (s.pts[0].lo != null) {
+      const up = s.pts.map(p => `${x(p.i)},${y(p.hi)}`), dn = s.pts.slice().reverse().map(p => `${x(p.i)},${y(p.lo)}`);
+      el("polygon", {points: up.concat(dn).join(" "), style: `fill:${s.color};opacity:0.14`}, svg);
+    }
+    el("polyline", {points: s.pts.map(p => `${x(p.i)},${y(p.v)}`).join(" "), fill: "none",
+      style: `stroke:${s.color}`, "stroke-width": 2.2, "stroke-linejoin": "round"}, svg);
+    const lp = s.pts[s.pts.length - 1];
+    el("circle", {cx: x(lp.i), cy: y(lp.v), r: 3.5, style: `fill:${s.color}`}, svg);
+  }
+  const rule = el("line", {y1: m.t, y2: m.t + ih, style: "stroke:var(--muted);opacity:.5", visibility: "hidden"}, svg);
+  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; box.appendChild(tip);
+  const hit = el("rect", {x: m.l, y: m.t, width: iw, height: ih, fill: "transparent"}, svg);
+  hit.addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    const i = Math.min(lastI, Math.max(first, Math.round(first + (px - m.l) / iw * (lastI - first))));
+    rule.setAttribute("x1", x(i)); rule.setAttribute("x2", x(i)); rule.setAttribute("visibility", "visible");
+    tip.replaceChildren();
+    const d = document.createElement("div"); d.className = "d"; d.textContent = `${state.window} days to ${fmtDate(dateOf(i), true)}`; tip.appendChild(d);
+    for (const s of shown) {
+      const p = s.pts.find(q => q.i === i); if (!p) continue;
+      const row = document.createElement("div"); row.className = "r";
+      const sw = document.createElement("span"); sw.className = "s"; sw.style.background = s.color;
+      const tx = document.createElement("span"); const F = change ? M.dfmt : M.fmt;
+      tx.textContent = `${s.label}: ${F(p.v)}` + (p.lo != null ? ` (${F(p.lo)} to ${F(p.hi)})` : "") + ` · ${p.k} staff`;
+      row.append(sw, tx); tip.appendChild(row);
+    }
+    tip.hidden = false;
+    const left = x(i) / W * box.clientWidth;
+    tip.style.left = Math.min(box.clientWidth - tip.offsetWidth - 4, Math.max(4, left + 12)) + "px"; tip.style.top = "8px";
+  });
+  hit.addEventListener("pointerleave", () => { tip.hidden = true; rule.setAttribute("visibility", "hidden"); });
+  drawTable(); drawLede();
+}
+
+// ---- overview table: every topic row x every lab
+const ROWS = [
+  {label: "All AI posts", f: {cats: new Set(ALLCATS), stance: -1, off: -1}},
+  ...CATS.map((c, i) => ({label: c.chip, f: {cats: new Set([i]), stance: -1, off: -1}})),
+  {label: "Concerned about AI risk", f: {cats: new Set([4, 5]), stance: 1, off: -1}},
+  {label: "Reassuring about AI risk", f: {cats: new Set([4, 5]), stance: 2, off: -1}},
+  {label: "Off-message, 2 or 3 (provisional)", f: {cats: new Set(ALLCATS), stance: -1, off: 2}},
+];
+const MIN_K = 15;
+function drawTable() {
+  const meas = state.measure === "days" ? "days" : "share", M = MEASURES[meas];
+  const t = document.getElementById("table"); t.replaceChildren();
+  const thead = t.createTHead(), hr = thead.insertRow();
+  hr.appendChild(Object.assign(document.createElement("th"), {textContent: ""}));
+  for (const l of LAB_UI) hr.appendChild(Object.assign(document.createElement("th"), {textContent: l.label}));
+  const tb = t.createTBody(), curKey = filterKey(curFilter());
+  for (const row of ROWS) {
+    const tr = tb.insertRow(); if (filterKey(row.f) === curKey) tr.className = "sel";
+    tr.insertCell().textContent = row.label;
+    for (const l of LAB_UI) {
+      const lv = series(l.key, row.f, meas, "level"), ch = series(l.key, row.f, meas, "change");
+      const td = tr.insertCell();
+      if (!lv.pts.length) { td.textContent = "—"; continue; }
+      const p = lv.pts[lv.pts.length - 1], q = ch.pts[ch.pts.length - 1];
+      td.textContent = M.fmt(p.v);
+      if (lv.k < MIN_K) { td.className = "thin"; td.title = `Only ${lv.k} staff`; continue; }
+      const sig = q.lo > 0 ? "up" : q.hi < 0 ? "down" : "";
+      const span = document.createElement("span"); span.className = "ch " + sig;
+      span.textContent = (sig === "up" ? "▲ " : sig === "down" ? "▼ " : "") + M.dfmt(q.v);
+      span.title = `Change from the same people's period average: ${M.dfmt(q.v)} (95% interval ${M.dfmt(q.lo)} to ${M.dfmt(q.hi)})`;
+      td.appendChild(span);
+    }
+    tr.addEventListener("click", () => { applyFilter(row.f); });
+  }
+  document.getElementById("table-caption").textContent =
+    `${M.title} in the ${state.window} days to ${fmtDate(dateOf(N - 1), true)}${state.who === "technical" ? ", technical roles only" : state.who === "regular" ? ", regular posters only" : ""}. ` +
+    `Below each figure: the change from the same people's own average over the period, in colour with an arrow only when its 95% interval excludes zero. ` +
+    `Grey italics: fewer than ${MIN_K} staff, too few to judge. Click a row to chart it.`;
+}
+
+const andList = a => a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a[0];
+function drawLede() {
+  const f = curFilter(); if (!f.cats.size) { document.getElementById("lede").textContent = ""; return; }
+  const parts = [], ups = [], downs = [];
+  for (const l of LAB_UI.filter(l => typeof l.key === "number" && state.on[l.key])) {
+    const lv = series(l.key, f, "share", "level"), ch = series(l.key, f, "share", "change");
+    if (!lv.pts.length || lv.k < MIN_K) continue;
+    const p = lv.pts[lv.pts.length - 1], q = ch.pts[ch.pts.length - 1];
+    parts.push(`${Math.round(p.v * 100)}% of tracked ${l.label} staff`);
+    if (q.lo > 0) ups.push(l.label);
+    if (q.hi < 0) downs.push(l.label);
+  }
+  if (!parts.length) { document.getElementById("lede").textContent = ""; return; }
+  const list = parts.length > 1 ? parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1] : parts[0];
+  const who = state.who === "technical" ? " (technical roles only)" : state.who === "regular" ? " (regular posters only)" : "";
+  document.getElementById("lede").textContent =
+    `In the ${state.window} days to ${fmtDate(dateOf(N - 1))}, ${list} posted on X ${describe(f)}${who}. ` +
+    (ups.length || downs.length ? "Compared with the same people's own average over the period, " +
+      [ups.length ? `${andList(ups)} ${ups.length > 1 ? "are" : "is"} higher` : "", downs.length ? `${andList(downs)} ${downs.length > 1 ? "are" : "is"} lower` : ""].filter(Boolean).join(" and ") +
+      ", by more than chance would explain." : "None of these is clearly different from its own average over the period.");
+}
+
+// ---- controls
+function applyFilter(f) {
+  state.cats = new Set(f.cats); state.stance = f.stance; state.off = f.off;
+  document.getElementById("stance").value = String(f.stance); document.getElementById("off").value = String(f.off);
+  syncChips(); draw();
+}
+function syncChips() {
+  document.querySelectorAll("#cats .chip").forEach((c, i) => c.classList.toggle("off", !state.cats.has(i)));
+  const key = filterKey(curFilter());
+  document.querySelectorAll("#presets .chip").forEach((c, i) => c.classList.toggle("active", filterKey({cats: new Set(PRESETS[i].cats), stance: PRESETS[i].stance, off: PRESETS[i].off}) === key));
+}
+function chip(label, color, onClick) {
+  const c = document.createElement("span"); c.className = "chip"; c.tabIndex = 0; c.setAttribute("role", "button");
+  if (color) { const sw = document.createElement("span"); sw.className = "swatch"; sw.style.background = color; c.appendChild(sw); }
+  c.appendChild(document.createTextNode(label));
+  c.addEventListener("click", onClick); c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } });
+  return c;
+}
+function init() {
+  document.getElementById("meta").textContent =
+    `${D.people} staff accounts · ${D.ai_posts.toLocaleString("en-GB")} AI posts and quotes · ${fmtDate(new Date(D.start + "T00:00:00Z"), true)} to ${fmtDate(new Date(D.end + "T00:00:00Z"), true)} · collected ${fmtDate(new Date(D.collected + "T00:00:00Z"), true)} from the X API · topics labelled by Claude`;
+  document.getElementById("start").textContent = fmtDate(new Date(D.start + "T00:00:00Z"), true);
+  const pre = prefixes(ALLF), byPerson = new Map();
+  MEM.forEach((m, i) => byPerson.set(m.p, (byPerson.get(m.p) || 0) + pre[i].P[N]));
+  const tot = [...byPerson.values()].sort((a, b) => b - a), all = tot.reduce((a, b) => a + b, 0);
+  const top10 = tot.slice(0, Math.round(tot.length / 10)).reduce((a, b) => a + b, 0);
+  document.getElementById("conc").textContent = `the most active 10% of tracked staff wrote ${Math.round(top10 / all * 100)}% of all AI posts, and ${tot.filter(v => !v).length} of ${tot.length} wrote none.`;
+  const P = document.getElementById("presets");
+  PRESETS.forEach(p => { const c = chip(p.label, null, () => applyFilter({cats: new Set(p.cats), stance: p.stance, off: p.off})); c.classList.add("preset"); P.appendChild(c); });
+  const C = document.getElementById("cats");
+  CATS.forEach((c, i) => C.appendChild(chip(c.chip, null, () => { state.cats.has(i) ? state.cats.delete(i) : state.cats.add(i); syncChips(); draw(); })));
+  const L = document.getElementById("labs");
+  LAB_UI.forEach(l => { const c = chip(l.label, l.color, () => { state.on[l.key] = !state.on[l.key]; c.classList.toggle("off", !state.on[l.key]); draw(); }); if (!l.on) c.classList.add("off"); L.appendChild(c); });
+  document.getElementById("stance").addEventListener("change", e => { state.stance = Number(e.target.value); syncChips(); draw(); });
+  document.getElementById("off").addEventListener("change", e => { state.off = Number(e.target.value); syncChips(); draw(); });
+  document.getElementById("measure").addEventListener("change", e => { state.measure = e.target.value; draw(); });
+  document.getElementById("window").addEventListener("change", e => { state.window = Number(e.target.value); draw(); });
+  document.getElementById("who").addEventListener("change", e => { state.who = e.target.value; draw(); });
+  document.getElementById("bands").addEventListener("change", e => { state.bands = e.target.checked; draw(); });
+  document.querySelectorAll("#view button").forEach(b => b.addEventListener("click", () => {
+    state.view = b.dataset.v; document.querySelectorAll("#view button").forEach(x => x.classList.toggle("on", x === b)); draw(); }));
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(draw, 120); });
+  syncChips(); draw();
+}
+init();
+</script>
+</body>
+</html>
